@@ -32,7 +32,8 @@ func (or OrderRepository) GetByNumber(ctx context.Context, number string) (order
 func (or OrderRepository) GetAllByUser(ctx context.Context, userID uuid.UUID) ([]service.OrderInfo, error) {
 	orderInfos := make([]service.OrderInfo, 0)
 	err := or.client.NewRaw(
-		"SELECT o.number, o.status, t.sum, o.uploaded_at FROM orders as o JOIN transactions t on t.order = o.number WHERE o.user_id = ?",
+		"SELECT o.number, o.status, t.sum accrual, o.uploaded_at FROM orders as o LEFT JOIN transactions t on t.order = o.number WHERE o."+
+			"user_id = ?",
 		userID.String(),
 	).Scan(ctx, &orderInfos)
 	if err != nil {

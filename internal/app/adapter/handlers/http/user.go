@@ -96,12 +96,13 @@ func (u UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	cookie := &http.Cookie{
+		Name:  "token",
+		Value: tokenString,
+		Path:  "/",
+	}
 	http.SetCookie(
-		w, &http.Cookie{
-			Name:  "token",
-			Value: tokenString,
-			Path:  "/",
-		},
+		w, cookie,
 	)
+	w.WriteHeader(http.StatusOK)
 }
