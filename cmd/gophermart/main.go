@@ -39,7 +39,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	loyaltyClient := loyal.NewLoyaltyClient(conf.AccrualSystemAddress)
+	loyaltyClient := loyal.NewLoyaltyClient(conf.AccrualSystemAddress, l)
 
 	balanceService := service.NewBalanceService(transactionRepo)
 	orderService := service.NewOrderService(orderRepo, ordersChannel)

@@ -18,11 +18,11 @@ func NewBalanceService(repo repository.TransactionRepository) *BalanceService {
 	return &BalanceService{repo: repo}
 }
 
-func (bs BalanceService) GetUserBalance(ctx context.Context, userID uuid.UUID) (int, error) {
+func (bs BalanceService) GetUserBalance(ctx context.Context, userID uuid.UUID) (float64, error) {
 	return bs.repo.GetBalanceByUser(ctx, userID)
 }
 
-func (bs BalanceService) GetUserWithdrawSum(ctx context.Context, userID uuid.UUID) (int, error) {
+func (bs BalanceService) GetUserWithdrawSum(ctx context.Context, userID uuid.UUID) (float64, error) {
 	return bs.repo.GetWithdrawSumByUser(ctx, userID)
 }
 
@@ -38,7 +38,7 @@ func (bs BalanceService) GetUserWithdraws(ctx context.Context, userID uuid.UUID)
 	return withdraws, nil
 }
 
-func (bs BalanceService) Withdraw(ctx context.Context, sum int, orderNumber string, userID uuid.UUID) error {
+func (bs BalanceService) Withdraw(ctx context.Context, sum float64, orderNumber string, userID uuid.UUID) error {
 	if !order.ValidateOrderFormat(orderNumber) {
 		return &order.InvalidFormat{OrderNumber: orderNumber}
 	}

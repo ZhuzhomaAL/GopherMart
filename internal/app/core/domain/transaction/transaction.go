@@ -17,7 +17,7 @@ type Transaction struct {
 	ID          uuid.UUID `bun:"id,type:uuid,pk"             json:"-"`
 	UserID      uuid.UUID `bun:"user_id,type:uuid"           json:"-"`
 	OderNumber  string    `bun:"order,notnull"               json:"order"`
-	Sum         int       `bun:"sum,notnull"                 json:"sum"`
+	Sum         float64   `bun:"sum,notnull"                 json:"sum"`
 	ProcessedAt time.Time `bun:"processed_at,notnull"        json:"processed_at"`
 	Type        string    `bun:"type"                        json:"-"`
 }

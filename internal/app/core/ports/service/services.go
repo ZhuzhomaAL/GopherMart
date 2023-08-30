@@ -26,20 +26,20 @@ type NewOrderProcessor interface {
 }
 
 type BalanceService interface {
-	GetUserBalance(ctx context.Context, userID uuid.UUID) (int, error)
-	GetUserWithdrawSum(ctx context.Context, userID uuid.UUID) (int, error)
+	GetUserBalance(ctx context.Context, userID uuid.UUID) (float64, error)
+	GetUserWithdrawSum(ctx context.Context, userID uuid.UUID) (float64, error)
 	GetUserWithdraws(ctx context.Context, userID uuid.UUID) ([]transaction.Transaction, error)
-	Withdraw(ctx context.Context, sum int, orderNumber string, userID uuid.UUID) error
+	Withdraw(ctx context.Context, sum float64, orderNumber string, userID uuid.UUID) error
 }
 
 type OrderInfo struct {
 	Number     string    `json:"number"`
 	Status     string    `json:"status"`
-	Accrual    int       `json:"accrual,omitempty"`
+	Accrual    float64   `json:"accrual,omitempty"`
 	UploadedAt time.Time `json:"uploaded_at"`
 }
 
 type Balance struct {
-	Current   int `json:"current"`
-	Withdrawn int `json:"withdrawn"`
+	Current   float64 `json:"current"`
+	Withdrawn float64 `json:"withdrawn"`
 }

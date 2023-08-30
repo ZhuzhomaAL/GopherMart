@@ -23,8 +23,8 @@ func NewBalanceHandler(bs service.BalanceService, log logger.MyLogger) *BalanceH
 }
 
 type withdrawRequest struct {
-	Order string `json:"order"`
-	Sum   int    `json:"sum"`
+	Order string  `json:"order"`
+	Sum   float64 `json:"sum"`
 }
 
 func (b BalanceHandler) GetUserBalance(w http.ResponseWriter, r *http.Request) {

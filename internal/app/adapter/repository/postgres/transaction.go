@@ -22,8 +22,8 @@ func (tr TransactionRepository) CreateTransaction(ctx context.Context, transacti
 	return err
 }
 
-func (tr TransactionRepository) GetBalanceByUser(ctx context.Context, userID uuid.UUID) (int, error) {
-	var balance int
+func (tr TransactionRepository) GetBalanceByUser(ctx context.Context, userID uuid.UUID) (float64, error) {
+	var balance float64
 	err := tr.client.NewRaw(
 		"SELECT SUM(sum) FROM transactions WHERE user_id = ? GROUP BY user_id",
 		userID.String(),
@@ -38,8 +38,8 @@ func (tr TransactionRepository) GetBalanceByUser(ctx context.Context, userID uui
 	return balance, nil
 }
 
-func (tr TransactionRepository) GetWithdrawSumByUser(ctx context.Context, userID uuid.UUID) (int, error) {
-	var sum int
+func (tr TransactionRepository) GetWithdrawSumByUser(ctx context.Context, userID uuid.UUID) (float64, error) {
+	var sum float64
 	err := tr.client.NewRaw(
 		"SELECT SUM(sum) FROM transactions WHERE user_id = ? AND type = ? GROUP BY user_id",
 		userID.String(), transaction.TypeWithdraw,
@@ -51,7 +51,7 @@ func (tr TransactionRepository) GetWithdrawSumByUser(ctx context.Context, userID
 		return 0, err
 	}
 
-	return int(math.Abs(float64(sum))), nil
+	return math.Abs(sum), nil
 }
 
 func (tr TransactionRepository) GetWithdrawsByUser(ctx context.Context, userID uuid.UUID) ([]transaction.Transaction, error) {

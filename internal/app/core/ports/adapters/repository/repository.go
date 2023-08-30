@@ -25,7 +25,7 @@ type OrderRepository interface {
 
 type TransactionRepository interface {
 	CreateTransaction(ctx context.Context, transaction transaction.Transaction) error
-	GetBalanceByUser(ctx context.Context, userID uuid.UUID) (int, error)
-	GetWithdrawSumByUser(ctx context.Context, userID uuid.UUID) (int, error)
+	GetBalanceByUser(ctx context.Context, userID uuid.UUID) (float64, error)
+	GetWithdrawSumByUser(ctx context.Context, userID uuid.UUID) (float64, error)
 	GetWithdrawsByUser(ctx context.Context, userID uuid.UUID) ([]transaction.Transaction, error)
 }

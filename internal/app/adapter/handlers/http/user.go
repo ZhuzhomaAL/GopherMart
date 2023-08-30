@@ -57,7 +57,7 @@ func (u UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cookie := &http.Cookie{
-		Name:  "Authorization",
+		Name:  "token",
 		Value: tokenString,
 		Path:  "/",
 	}
@@ -100,7 +100,7 @@ func (u UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	http.SetCookie(
 		w, &http.Cookie{
-			Name:  "Authorization",
+			Name:  "token",
 			Value: tokenString,
 			Path:  "/",
 		},
