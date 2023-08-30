@@ -47,8 +47,8 @@ func main() {
 
 	orderProcessor := service.NewOrderProcessor(ordersChannel, orderInfosChannel, loyaltyClient, orderService)
 
-	fetchHandler := event.NewFetchHandler(ordersChannel, orderProcessor, time.Second*60, 20, l)
-	updateHandler := event.NewUpdateHandler(orderInfosChannel, orderService, time.Second*10, l)
+	fetchHandler := event.NewFetchHandler(ordersChannel, orderProcessor, time.Second, 20, l)
+	updateHandler := event.NewUpdateHandler(orderInfosChannel, orderService, time.Second, l)
 
 	balanceHandler := httpHandlers.NewBalanceHandler(balanceService, l)
 	orderHandler := httpHandlers.NewOrderHandler(orderService, l)

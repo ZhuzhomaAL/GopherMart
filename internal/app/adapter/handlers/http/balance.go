@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/domain/order"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/domain/transaction"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/service"
@@ -85,11 +84,11 @@ func (b BalanceHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := b.bs.Withdraw(r.Context(), withdraw.Sum, withdraw.Order, userID); err != nil {
 		b.log.L.Error("failed to process withdrawal", zap.Error(err))
-		if errors.Is(err, order.InvalidFormat{}) {
+		if _, ok := err.(*order.InvalidFormat); ok {
 			http.Error(w, "Invalid order format", http.StatusUnprocessableEntity)
 			return
 		}
-		if errors.Is(err, transaction.NotEnoughMoney{}) {
+		if _, ok := err.(*transaction.NotEnoughMoney); ok {
 			http.Error(w, "Not enough money", http.StatusPaymentRequired)
 			return
 		}
