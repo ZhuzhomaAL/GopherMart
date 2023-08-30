@@ -8,15 +8,15 @@ import (
 )
 
 type LoyaltyClient struct {
-	baseUrl string
+	baseURL string
 }
 
 const (
 	getOrderInfoPath = "/api/orders"
 )
 
-func NewLoyaltyClient(baseUrl string) *LoyaltyClient {
-	return &LoyaltyClient{baseUrl: baseUrl}
+func NewLoyaltyClient(baseURL string) *LoyaltyClient {
+	return &LoyaltyClient{baseURL: baseURL}
 }
 
 func (lc LoyaltyClient) GetOrderProcessingInfo(order string) (clients.OrderLoyaltyInfo, error) {
@@ -27,14 +27,18 @@ func (lc LoyaltyClient) GetOrderProcessingInfo(order string) (clients.OrderLoyal
 		SetRetryWaitTime(60*time.Second).
 		R().
 		SetResult(orderInfo).
-		AddRetryCondition(func(response *resty.Response, err error) bool {
-			return response.StatusCode() == http.StatusTooManyRequests
-		}).
-		SetPathParams(map[string]string{
-			"order": order,
-		}).
+		AddRetryCondition(
+			func(response *resty.Response, err error) bool {
+				return response.StatusCode() == http.StatusTooManyRequests
+			},
+		).
+		SetPathParams(
+			map[string]string{
+				"order": order,
+			},
+		).
 		SetHeader("Accept", "application/json").
-		Get(lc.baseUrl + getOrderInfoPath + "/{order}")
+		Get(lc.baseURL + getOrderInfoPath + "/{order}")
 	if err != nil {
 		if responseError, ok := err.(*resty.ResponseError); ok {
 			return *orderInfo, clients.LoyaltyServiceError{

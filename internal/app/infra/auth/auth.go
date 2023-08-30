@@ -38,7 +38,7 @@ func Middleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			var id uuid.UUID
-			c, err := r.Cookie("token")
+			c, err := r.Cookie("Authorization")
 			if err != nil {
 				w.WriteHeader(http.StatusUnauthorized)
 				return

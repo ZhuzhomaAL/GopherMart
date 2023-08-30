@@ -8,7 +8,7 @@ type IncorrectLoginOrPassword struct {
 }
 
 func (IncorrectLoginOrPassword) Error() string {
-	return fmt.Sprintf("Incorrect login or password")
+	return "Incorrect login or password"
 }
 
 type LoginAlreadyExists struct {

@@ -16,7 +16,7 @@ func MakeConfig() Config {
 	var config Config
 
 	flag.StringVar(&config.RunAddress, "a", ":8080", "address and port to run server")
-	flag.StringVar(&config.AccrualSystemAddress, "r", "/", "accrual system address")
+	flag.StringVar(&config.AccrualSystemAddress, "r", "", "accrual system address")
 	flag.StringVar(
 		&config.DatabaseURI, "d", "", "database connection",
 	)

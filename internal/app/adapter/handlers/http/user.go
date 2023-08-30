@@ -57,7 +57,7 @@ func (u UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cookie := &http.Cookie{
-		Name:  "token",
+		Name:  "Authorization",
 		Value: tokenString,
 		Path:  "/",
 	}
@@ -65,7 +65,6 @@ func (u UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		w, cookie,
 	)
 	w.WriteHeader(http.StatusOK)
-	return
 }
 
 func (u UserHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -101,10 +100,9 @@ func (u UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	http.SetCookie(
 		w, &http.Cookie{
-			Name:  "token",
+			Name:  "Authorization",
 			Value: tokenString,
 			Path:  "/",
 		},
 	)
-	return
 }

@@ -53,8 +53,8 @@ func (os OrderService) LoadOrderByNumber(ctx context.Context, number string, use
 	return nil
 }
 
-func (os OrderService) GetUserOrders(ctx context.Context, userId uuid.UUID) ([]service.OrderInfo, error) {
-	orders, err := os.orderRepo.GetAllByUser(ctx, userId)
+func (os OrderService) GetUserOrders(ctx context.Context, userID uuid.UUID) ([]service.OrderInfo, error) {
+	orders, err := os.orderRepo.GetAllByUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

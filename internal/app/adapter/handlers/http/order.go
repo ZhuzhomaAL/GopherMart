@@ -62,21 +62,20 @@ func (oh OrderHandler) LoadOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusAccepted)
-	return
 }
 
 func (oh OrderHandler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	userID, ok := auth.GetUserID(r)
 	if !ok {
 		oh.log.L.Error("failed to get user")
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}
-
 	orders, err := oh.os.GetUserOrders(r.Context(), userID)
 	if err != nil {
 		oh.log.L.Error("failed to get user orders", zap.Error(err))
-		if errors.Is(err, service.NoData{}) {
+		if _, ok := err.(*service.NoData); ok {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -90,7 +89,6 @@ func (oh OrderHandler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write(resp); err != nil {
 		oh.log.L.Error("failed to make response", zap.Error(err))

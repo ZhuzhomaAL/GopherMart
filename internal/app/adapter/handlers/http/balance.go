@@ -98,7 +98,6 @@ func (b BalanceHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	return
 }
 
 func (b BalanceHandler) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
@@ -112,7 +111,7 @@ func (b BalanceHandler) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
 	withdrawals, err := b.bs.GetUserWithdraws(r.Context(), userID)
 	if err != nil {
 		b.log.L.Error("failed to get withdrawals", zap.Error(err))
-		if errors.Is(err, service.NoData{}) {
+		if _, ok := err.(*service.NoData); ok {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
