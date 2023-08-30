@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 )
 
@@ -26,9 +27,9 @@ type (
 
 type (
 	OrderFetchInfoHandler interface {
-		FetchOrderStatus()
+		FetchOrderStatus(ctx context.Context)
 	}
 	OrderUpdateHandler interface {
-		UpdateStatusAndBalance()
+		UpdateStatusAndBalance(ctx context.Context)
 	}
 )

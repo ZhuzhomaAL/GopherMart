@@ -18,7 +18,7 @@ type Order struct {
 	bun.BaseModel `bun:"table:orders,alias:o"`
 
 	ID         uuid.UUID `bun:"id,type:uuid,pk"             json:"-"`
-	UserId     uuid.UUID `bun:"user_id,type:uuid"           json:"-"`
+	UserID     uuid.UUID `bun:"user_id,type:uuid"           json:"-"`
 	Number     string    `bun:"number,notnull,unique"       json:"number"`
 	Status     string    `bun:"status,notnull"             json:"status"`
 	UploadedAt time.Time `bun:"uploaded_at,notnull"         json:"uploaded_at"`

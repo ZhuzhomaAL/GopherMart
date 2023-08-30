@@ -29,11 +29,11 @@ func (or OrderRepository) GetByNumber(ctx context.Context, number string) (order
 	return *o, err
 }
 
-func (or OrderRepository) GetAllByUser(ctx context.Context, userId uuid.UUID) ([]service.OrderInfo, error) {
+func (or OrderRepository) GetAllByUser(ctx context.Context, userID uuid.UUID) ([]service.OrderInfo, error) {
 	orderInfos := make([]service.OrderInfo, 0)
 	err := or.client.NewRaw(
 		"SELECT o.number, o.status, t.sum, o.uploaded_at FROM orders as o JOIN transactions t on t.order = o.number WHERE o.user_id = ?",
-		userId.String(),
+		userID.String(),
 	).Scan(ctx, &orderInfos)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (or OrderRepository) DeleteOrder(ctx context.Context, order order.Order) er
 	return err
 }
 
-func (or OrderRepository) ButchUpdateOrdersAndBalance(
+func (or OrderRepository) BatchUpdateOrdersAndBalance(
 	ctx context.Context, orders []order.Order, transactions []transaction.Transaction,
 ) error {
 	tx, err := or.client.BeginTx(ctx, &sql.TxOptions{})

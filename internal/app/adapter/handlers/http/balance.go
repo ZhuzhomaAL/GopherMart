@@ -7,17 +7,19 @@ import (
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/domain/transaction"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/service"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/auth"
-	"github.com/gofrs/uuid"
+	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/logger"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 )
 
 type BalanceHandler struct {
-	bs service.BalanceService
+	bs  service.BalanceService
+	log logger.MyLogger
 }
 
-func NewBalanceHandler(bs service.BalanceService) *BalanceHandler {
-	return &BalanceHandler{bs: bs}
+func NewBalanceHandler(bs service.BalanceService, log logger.MyLogger) *BalanceHandler {
+	return &BalanceHandler{bs: bs, log: log}
 }
 
 type withdrawRequest struct {
@@ -26,18 +28,21 @@ type withdrawRequest struct {
 }
 
 func (b BalanceHandler) GetUserBalance(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(auth.ContextUserID).(uuid.UUID)
+	userID, ok := auth.GetUserID(r)
 	if !ok {
+		b.log.L.Error("failed to get user")
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}
 	current, err := b.bs.GetUserBalance(r.Context(), userID)
 	if err != nil {
+		b.log.L.Error("failed to get balance", zap.Error(err))
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}
 	withdrawn, err := b.bs.GetUserWithdrawSum(r.Context(), userID)
 	if err != nil {
+		b.log.L.Error("failed to get withdrawals", zap.Error(err))
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}
@@ -48,12 +53,14 @@ func (b BalanceHandler) GetUserBalance(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := json.Marshal(balance)
 	if err != nil {
+		b.log.L.Error("failed to marshal response", zap.Error(err))
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write(resp); err != nil {
+		b.log.L.Error("failed to make response", zap.Error(err))
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}
@@ -62,6 +69,7 @@ func (b BalanceHandler) GetUserBalance(w http.ResponseWriter, r *http.Request) {
 func (b BalanceHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	withdraw := withdrawRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&withdraw); err != nil {
+		b.log.L.Error("failed to decode request", zap.Error(err))
 		if err == io.EOF {
 			http.Error(w, "request is empty, expected not empty", http.StatusBadRequest)
 			return
@@ -69,12 +77,14 @@ func (b BalanceHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}
-	userID, ok := r.Context().Value(auth.ContextUserID).(uuid.UUID)
+	userID, ok := auth.GetUserID(r)
 	if !ok {
+		b.log.L.Error("failed to get user")
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}
 	if err := b.bs.Withdraw(r.Context(), withdraw.Sum, withdraw.Order, userID); err != nil {
+		b.log.L.Error("failed to process withdrawal", zap.Error(err))
 		if errors.Is(err, order.InvalidFormat{}) {
 			http.Error(w, "Invalid order format", http.StatusUnprocessableEntity)
 			return
@@ -92,14 +102,16 @@ func (b BalanceHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b BalanceHandler) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(auth.ContextUserID).(uuid.UUID)
+	userID, ok := auth.GetUserID(r)
 	if !ok {
+		b.log.L.Error("failed to get user")
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}
 
 	withdrawals, err := b.bs.GetUserWithdraws(r.Context(), userID)
 	if err != nil {
+		b.log.L.Error("failed to get withdrawals", zap.Error(err))
 		if errors.Is(err, service.NoData{}) {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -110,12 +122,14 @@ func (b BalanceHandler) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := json.Marshal(withdrawals)
 	if err != nil {
+		b.log.L.Error("failed to marshal response", zap.Error(err))
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write(resp); err != nil {
+		b.log.L.Error("failed to make response", zap.Error(err))
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}

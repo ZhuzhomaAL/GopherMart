@@ -12,22 +12,22 @@ import (
 )
 
 type OrderService struct {
-	orderRepo repository.OrderRepository
-	ochan     *chan string
+	orderRepo     repository.OrderRepository
+	ordersChannel chan string
 }
 
-func NewOrderService(orderRepo repository.OrderRepository, ochan *chan string) *OrderService {
-	return &OrderService{orderRepo: orderRepo, ochan: ochan}
+func NewOrderService(orderRepo repository.OrderRepository, ordersChannel chan string) *OrderService {
+	return &OrderService{orderRepo: orderRepo, ordersChannel: ordersChannel}
 }
 
-func (os OrderService) LoadOrderByNumber(ctx context.Context, number string, userId uuid.UUID) error {
+func (os OrderService) LoadOrderByNumber(ctx context.Context, number string, userID uuid.UUID) error {
 	if !order.ValidateOrderFormat(number) {
 		return &order.InvalidFormat{OrderNumber: number}
 	}
 	if o, err := os.orderRepo.GetByNumber(ctx, number); err == nil {
 		return &order.AlreadyLoaded{
 			OrderNumber: o.Number,
-			UserId:      o.UserId,
+			UserID:      o.UserID,
 		}
 	}
 	id, err := uuid.NewV7()
@@ -37,7 +37,7 @@ func (os OrderService) LoadOrderByNumber(ctx context.Context, number string, use
 	if err := os.orderRepo.CreateOrder(
 		ctx, order.Order{
 			ID:         id,
-			UserId:     userId,
+			UserID:     userID,
 			Number:     number,
 			Status:     order.StatusNew,
 			UploadedAt: time.Now(),
@@ -46,7 +46,10 @@ func (os OrderService) LoadOrderByNumber(ctx context.Context, number string, use
 		return err
 	}
 
-	*os.ochan <- number
+	//Пишем номер в канал в новом потоке, чтобы не блокировать хэндлер
+	go func() {
+		os.ordersChannel <- number
+	}()
 	return nil
 }
 
@@ -68,7 +71,7 @@ func (os OrderService) UpdateOrdersAndBalance(ctx context.Context, info []client
 	var errors []error
 	errors = append(errors, os.fillInfo(ctx, info, &orders, &transactions)...)
 
-	if err := os.orderRepo.ButchUpdateOrdersAndBalance(ctx, orders, transactions); err != nil {
+	if err := os.orderRepo.BatchUpdateOrdersAndBalance(ctx, orders, transactions); err != nil {
 		errors = append(errors, err)
 	}
 
@@ -114,7 +117,7 @@ func (os OrderService) fillInfo(
 			*transactions = append(
 				*transactions, transaction.Transaction{
 					ID:          id,
-					UserId:      o.UserId,
+					UserID:      o.UserID,
 					OderNumber:  o.Number,
 					Sum:         i.Accrual,
 					ProcessedAt: time.Now(),

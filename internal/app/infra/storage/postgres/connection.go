@@ -36,8 +36,8 @@ func (c Client) CreateTables(ctx context.Context) error {
 	u := new(user.User)
 	o := new(order.Order)
 	t := new(transaction.Transaction)
-	_, err := c.NewCreateTable().Model(u).Exec(ctx)
-	_, err = c.NewCreateTable().Model(o).Exec(ctx)
-	_, err = c.NewCreateTable().Model(t).Exec(ctx)
+	_, err := c.NewCreateTable().Model(u).IfNotExists().Exec(ctx)
+	_, err = c.NewCreateTable().Model(o).IfNotExists().Exec(ctx)
+	_, err = c.NewCreateTable().Model(t).IfNotExists().Exec(ctx)
 	return err
 }

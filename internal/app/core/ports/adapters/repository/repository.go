@@ -17,15 +17,15 @@ type UserRepository interface {
 type OrderRepository interface {
 	CreateOrder(ctx context.Context, order order.Order) error
 	GetByNumber(ctx context.Context, number string) (order.Order, error)
-	GetAllByUser(ctx context.Context, userId uuid.UUID) ([]service.OrderInfo, error)
+	GetAllByUser(ctx context.Context, userID uuid.UUID) ([]service.OrderInfo, error)
 	UpdateOrder(ctx context.Context, order order.Order) error
 	DeleteOrder(ctx context.Context, order order.Order) error
-	ButchUpdateOrdersAndBalance(ctx context.Context, orders []order.Order, transactions []transaction.Transaction) error
+	BatchUpdateOrdersAndBalance(ctx context.Context, orders []order.Order, transactions []transaction.Transaction) error
 }
 
 type TransactionRepository interface {
 	CreateTransaction(ctx context.Context, transaction transaction.Transaction) error
-	GetBalanceByUser(ctx context.Context, userId uuid.UUID) (int, error)
-	GetWithdrawSumByUser(ctx context.Context, userId uuid.UUID) (int, error)
-	GetWithdrawsByUser(ctx context.Context, userId uuid.UUID) ([]transaction.Transaction, error)
+	GetBalanceByUser(ctx context.Context, userID uuid.UUID) (int, error)
+	GetWithdrawSumByUser(ctx context.Context, userID uuid.UUID) (int, error)
+	GetWithdrawsByUser(ctx context.Context, userID uuid.UUID) ([]transaction.Transaction, error)
 }

@@ -15,8 +15,8 @@ type UserService interface {
 }
 
 type OrderService interface {
-	LoadOrderByNumber(ctx context.Context, number string, userId uuid.UUID) error
-	GetUserOrders(ctx context.Context, userId uuid.UUID) ([]OrderInfo, error)
+	LoadOrderByNumber(ctx context.Context, number string, userID uuid.UUID) error
+	GetUserOrders(ctx context.Context, userID uuid.UUID) ([]OrderInfo, error)
 	UpdateOrdersAndBalance(ctx context.Context, info []clients.OrderLoyaltyInfo) []error
 	RemoveOrder(ctx context.Context, number string) error
 }
@@ -26,10 +26,10 @@ type NewOrderProcessor interface {
 }
 
 type BalanceService interface {
-	GetUserBalance(ctx context.Context, userId uuid.UUID) (int, error)
-	GetUserWithdrawSum(ctx context.Context, userId uuid.UUID) (int, error)
-	GetUserWithdraws(ctx context.Context, userId uuid.UUID) ([]transaction.Transaction, error)
-	Withdraw(ctx context.Context, sum int, orderNumber string, userId uuid.UUID) error
+	GetUserBalance(ctx context.Context, userID uuid.UUID) (int, error)
+	GetUserWithdrawSum(ctx context.Context, userID uuid.UUID) (int, error)
+	GetUserWithdraws(ctx context.Context, userID uuid.UUID) ([]transaction.Transaction, error)
+	Withdraw(ctx context.Context, sum int, orderNumber string, userID uuid.UUID) error
 }
 
 type OrderInfo struct {

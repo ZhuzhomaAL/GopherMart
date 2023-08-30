@@ -18,16 +18,16 @@ func NewBalanceService(repo repository.TransactionRepository) *BalanceService {
 	return &BalanceService{repo: repo}
 }
 
-func (bs BalanceService) GetUserBalance(ctx context.Context, userId uuid.UUID) (int, error) {
-	return bs.repo.GetBalanceByUser(ctx, userId)
+func (bs BalanceService) GetUserBalance(ctx context.Context, userID uuid.UUID) (int, error) {
+	return bs.repo.GetBalanceByUser(ctx, userID)
 }
 
-func (bs BalanceService) GetUserWithdrawSum(ctx context.Context, userId uuid.UUID) (int, error) {
-	return bs.repo.GetWithdrawSumByUser(ctx, userId)
+func (bs BalanceService) GetUserWithdrawSum(ctx context.Context, userID uuid.UUID) (int, error) {
+	return bs.repo.GetWithdrawSumByUser(ctx, userID)
 }
 
-func (bs BalanceService) GetUserWithdraws(ctx context.Context, userId uuid.UUID) ([]transaction.Transaction, error) {
-	withdraws, err := bs.repo.GetWithdrawsByUser(ctx, userId)
+func (bs BalanceService) GetUserWithdraws(ctx context.Context, userID uuid.UUID) ([]transaction.Transaction, error) {
+	withdraws, err := bs.repo.GetWithdrawsByUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -38,12 +38,12 @@ func (bs BalanceService) GetUserWithdraws(ctx context.Context, userId uuid.UUID)
 	return withdraws, nil
 }
 
-func (bs BalanceService) Withdraw(ctx context.Context, sum int, orderNumber string, userId uuid.UUID) error {
+func (bs BalanceService) Withdraw(ctx context.Context, sum int, orderNumber string, userID uuid.UUID) error {
 	if !order.ValidateOrderFormat(orderNumber) {
 		return &order.InvalidFormat{OrderNumber: orderNumber}
 	}
 
-	balance, err := bs.repo.GetBalanceByUser(ctx, userId)
+	balance, err := bs.repo.GetBalanceByUser(ctx, userID)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (bs BalanceService) Withdraw(ctx context.Context, sum int, orderNumber stri
 	return bs.repo.CreateTransaction(
 		ctx, transaction.Transaction{
 			ID:          id,
-			UserId:      userId,
+			UserID:      userID,
 			OderNumber:  orderNumber,
 			Sum:         -sum,
 			ProcessedAt: time.Now(),

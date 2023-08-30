@@ -6,10 +6,11 @@ import (
 )
 
 type Config struct {
-	DatabaseUri          string
+	DatabaseURI          string
 	RunAddress           string
 	AccrualSystemAddress string
-}
+	LogLevel             string
+} //
 
 func MakeConfig() Config {
 	var config Config
@@ -17,16 +18,17 @@ func MakeConfig() Config {
 	flag.StringVar(&config.RunAddress, "a", ":8080", "address and port to run server")
 	flag.StringVar(&config.AccrualSystemAddress, "r", "/", "accrual system address")
 	flag.StringVar(
-		&config.DatabaseUri, "d", "postgres://postgres:345973@localhost:5432/postgres?sslmode=disable", "database connection",
+		&config.DatabaseURI, "d", "", "database connection",
 	)
+	flag.StringVar(&config.LogLevel, "l", "info", "log level")
 	flag.Parse()
 
 	if envRunAddress := os.Getenv("RUN_ADDRESS"); envRunAddress != "" {
 		config.RunAddress = envRunAddress
 	}
 
-	if envDatabaseUri := os.Getenv("DATABASE_URI"); envDatabaseUri != "" {
-		config.DatabaseUri = envDatabaseUri
+	if envDatabaseURI := os.Getenv("DATABASE_URI"); envDatabaseURI != "" {
+		config.DatabaseURI = envDatabaseURI
 	}
 
 	if envAccrualSystemAddress := os.Getenv("ACCRUAL_SYSTEM_ADDRESS"); envAccrualSystemAddress != "" {

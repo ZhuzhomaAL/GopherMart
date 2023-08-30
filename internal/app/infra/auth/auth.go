@@ -43,7 +43,7 @@ func Middleware(h http.Handler) http.Handler {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-			id, err = getUserID(c.Value)
+			id, err = getUserIDFromToken(c.Value)
 			if err != nil {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
@@ -54,7 +54,7 @@ func Middleware(h http.Handler) http.Handler {
 	)
 }
 
-func getUserID(tokenString string) (uuid.UUID, error) {
+func getUserIDFromToken(tokenString string) (uuid.UUID, error) {
 	claims := &Claims{}
 
 	token, err := jwt.ParseWithClaims(
@@ -74,4 +74,9 @@ func getUserID(tokenString string) (uuid.UUID, error) {
 	}
 
 	return claims.UserID, nil
+}
+
+func GetUserID(r *http.Request) (uuid.UUID, bool) {
+	userID, ok := r.Context().Value(ContextUserID).(uuid.UUID)
+	return userID, ok
 }

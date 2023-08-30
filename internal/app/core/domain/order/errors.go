@@ -11,7 +11,7 @@ type InvalidStatus struct {
 }
 
 func (e InvalidStatus) Error() string {
-	return fmt.Sprintf("Invalid status: %s for order number %d", e.Status, e.OrderNumber)
+	return fmt.Sprintf("Invalid status: %s for order number %s", e.Status, e.OrderNumber)
 }
 
 type NoSuchOrder struct {
@@ -19,16 +19,16 @@ type NoSuchOrder struct {
 }
 
 func (e NoSuchOrder) Error() string {
-	return fmt.Sprintf("Order number %d not found", e.OrderNumber)
+	return fmt.Sprintf("Order number %s not found", e.OrderNumber)
 }
 
 type AlreadyLoaded struct {
 	OrderNumber string
-	UserId      uuid.UUID
+	UserID      uuid.UUID
 }
 
 func (e AlreadyLoaded) Error() string {
-	return fmt.Sprintf("Order number %d already loaded", e.OrderNumber)
+	return fmt.Sprintf("Order number %s already loaded", e.OrderNumber)
 }
 
 type InvalidFormat struct {
@@ -36,5 +36,5 @@ type InvalidFormat struct {
 }
 
 func (e InvalidFormat) Error() string {
-	return fmt.Sprintf("Order number %d has invalid format", e.OrderNumber)
+	return fmt.Sprintf("Order number %s has invalid format", e.OrderNumber)
 }

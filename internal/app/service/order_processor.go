@@ -8,16 +8,16 @@ import (
 )
 
 type OrderProcessor struct {
-	fetch         chan<- string
-	updatech      chan<- clients.OrderLoyaltyInfo
-	loyaltyClient clients.LoyalClient
-	os            service.OrderService
+	ordersChannel     chan<- string
+	orderInfosChannel chan<- clients.OrderLoyaltyInfo
+	loyaltyClient     clients.LoyalClient
+	os                service.OrderService
 }
 
 func NewOrderProcessor(
-	fetch chan<- string, updatech chan<- clients.OrderLoyaltyInfo, loyaltyClient clients.LoyalClient, os service.OrderService,
+	ordersChannel chan<- string, orderInfosChannel chan<- clients.OrderLoyaltyInfo, loyaltyClient clients.LoyalClient, os service.OrderService,
 ) *OrderProcessor {
-	return &OrderProcessor{fetch: fetch, updatech: updatech, loyaltyClient: loyaltyClient, os: os}
+	return &OrderProcessor{ordersChannel: ordersChannel, orderInfosChannel: orderInfosChannel, loyaltyClient: loyaltyClient, os: os}
 }
 
 func (op OrderProcessor) ProcessNewOrder(ctx context.Context, number string) error {
@@ -27,15 +27,15 @@ func (op OrderProcessor) ProcessNewOrder(ctx context.Context, number string) err
 			_ = op.os.RemoveOrder(ctx, number)
 			return err
 		}
-		op.fetch <- number
+		op.ordersChannel <- number
 		return err
 	}
 
 	if orderInfo.Status != clients.StatusProcessed && orderInfo.Status != clients.StatusInvalid {
-		op.fetch <- number
+		op.ordersChannel <- number
 	}
 
-	op.updatech <- orderInfo
+	op.orderInfosChannel <- orderInfo
 
 	return nil
 }
