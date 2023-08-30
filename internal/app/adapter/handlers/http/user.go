@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"errors"
 	domenuser "github.com/ZhuzhomaAL/GopherMart/internal/app/core/domain/user"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/service"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/auth"
@@ -41,7 +40,7 @@ func (u UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	user, err := u.us.Register(r.Context(), creds.Login, creds.Password)
 	if err != nil {
 		u.log.L.Error("failed to register user", zap.Error(err))
-		if errors.Is(err, domenuser.LoginAlreadyExists{}) {
+		if _, ok := err.(*domenuser.LoginAlreadyExists); ok {
 			http.Error(w, "internal server error occurred", http.StatusConflict)
 			return
 		}
@@ -82,7 +81,7 @@ func (u UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	user, err := u.us.Login(r.Context(), creds.Login, creds.Password)
 	if err != nil {
 		u.log.L.Error("failed to login user", zap.Error(err))
-		if errors.Is(err, domenuser.IncorrectLoginOrPassword{}) {
+		if _, ok := err.(*domenuser.IncorrectLoginOrPassword); ok {
 			http.Error(w, "internal server error occurred", http.StatusUnauthorized)
 			return
 		}
