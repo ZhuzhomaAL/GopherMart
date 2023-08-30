@@ -7,6 +7,7 @@ import (
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/adapters/repository"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/service"
 	"github.com/gofrs/uuid"
+	"math"
 	"time"
 )
 
@@ -33,6 +34,9 @@ func (bs BalanceService) GetUserWithdraws(ctx context.Context, userID uuid.UUID)
 	}
 	if len(withdraws) == 0 {
 		return nil, &service.NoData{}
+	}
+	for i := range withdraws {
+		withdraws[i].Sum = math.Abs(withdraws[i].Sum)
 	}
 
 	return withdraws, nil
