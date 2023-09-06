@@ -7,7 +7,6 @@ import (
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/auth"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/logger"
 	"go.uber.org/zap"
-	"io"
 	"net/http"
 )
 
@@ -29,11 +28,7 @@ func (u UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	creds := userCreds{}
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
 		u.log.L.Error("failed to decode request", zap.Error(err))
-		if err == io.EOF {
-			http.Error(w, "request is empty, expected not empty", http.StatusBadRequest)
-			return
-		}
-		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
+		http.Error(w, "Can not parse request", http.StatusBadRequest)
 		return
 	}
 
@@ -70,11 +65,7 @@ func (u UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	creds := userCreds{}
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
 		u.log.L.Error("failed to decode request", zap.Error(err))
-		if err == io.EOF {
-			http.Error(w, "incorrect response", http.StatusBadRequest)
-			return
-		}
-		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
+		http.Error(w, "Can not parse request", http.StatusBadRequest)
 		return
 	}
 

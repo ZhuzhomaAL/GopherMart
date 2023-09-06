@@ -2,6 +2,8 @@ package event
 
 import (
 	"context"
+	"errors"
+	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/adapters/clients"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/service"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/logger"
 	"go.uber.org/zap"
@@ -9,48 +11,59 @@ import (
 )
 
 type FetchHandler struct {
-	ordersChannel chan string
-	processor     service.NewOrderProcessor
-	frequency     time.Duration
-	workersCount  int
-	log           logger.MyLogger
+	processor    service.NewOrderProcessor
+	orderService service.OrderService
+	frequency    time.Duration
+	workersCount int
+	log          logger.MyLogger
 }
 
 func NewFetchHandler(
-	ordersChannel chan string, processor service.NewOrderProcessor, frequency time.Duration, workersCount int, log logger.MyLogger,
+	processor service.NewOrderProcessor, orderService service.OrderService, frequency time.Duration, workersCount int, log logger.MyLogger,
 ) *FetchHandler {
-	return &FetchHandler{ordersChannel: ordersChannel, processor: processor, frequency: frequency, workersCount: workersCount, log: log}
+	return &FetchHandler{processor: processor, orderService: orderService, frequency: frequency, workersCount: workersCount, log: log}
 }
 
 func (f *FetchHandler) FetchOrderStatus(ctx context.Context) {
 	ticker := time.NewTicker(f.frequency)
-	var orders []string
 	//Количество потоков запросов к сервису лояльности
 	workers := make(chan struct{}, f.workersCount)
-Loop:
+	sleepSignal := make(chan int)
+	requestCtx, cancelRequests := context.WithCancel(ctx)
 	for {
 		select {
 		case <-ticker.C:
+			orders, err := f.orderService.GetUnprocessedOrders(ctx)
+			if err != nil {
+				f.log.L.Error("failed to get unprocessed orders", zap.Error(err))
+			}
+			if len(orders) == 0 {
+				continue
+			}
 			for _, o := range orders {
-				orderNumber := o
-				//Запускаем получение данных из сервиса лояльности многопоточно
-				go func() {
+				select {
+				case sleepTime := <-sleepSignal:
+					time.Sleep(time.Duration(sleepTime) * time.Second)
+				default:
+					orderNumber := o.Number
+					//Запускаем получение данных из сервиса лояльности многопоточно
 					//"Занимаем" или ожидаем один из потоков
 					workers <- struct{}{}
-					err := f.processor.ProcessNewOrder(ctx, orderNumber)
-					if err != nil {
-						f.log.L.Error("failed to get order info", zap.Error(err))
-					}
-					//"Освобождаем" поток
-					<-workers
-				}()
+					go func() {
+						err := f.processor.ProcessNewOrder(requestCtx, orderNumber)
+						if err != nil {
+							var tooManyRequests *clients.TooManyRequests
+							if errors.As(err, &tooManyRequests) {
+								cancelRequests()
+								sleepSignal <- tooManyRequests.RetryAfter
+							}
+							f.log.L.Error("failed to get order info", zap.Error(err))
+						}
+						//"Освобождаем" поток
+						<-workers
+					}()
+				}
 			}
-			orders = nil
-		case o, ok := <-f.ordersChannel:
-			if !ok {
-				break Loop
-			}
-			orders = append(orders, o)
 		}
 	}
 }

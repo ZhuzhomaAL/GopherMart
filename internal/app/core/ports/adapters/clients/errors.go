@@ -10,6 +10,15 @@ func (e NoOrderError) Error() string {
 	return fmt.Sprintf("Order %s didn't exist in loyalty system", e.Order)
 }
 
+type TooManyRequests struct {
+	Order      string
+	RetryAfter int
+}
+
+func (e TooManyRequests) Error() string {
+	return fmt.Sprintf("Too many requests, retry after %d seconds", e.RetryAfter)
+}
+
 type LoyaltyServiceError struct {
 	OriginError error
 }

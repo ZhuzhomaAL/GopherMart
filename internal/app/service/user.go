@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/domain/user"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/adapters/repository"
+	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/auth"
 	"github.com/gofrs/uuid"
 )
 
@@ -20,7 +21,7 @@ func (us UserService) Register(ctx context.Context, login, password string) (use
 	if _, err := us.repo.GetByLogin(ctx, login); err == nil {
 		return user.User{}, &user.LoginAlreadyExists{Login: login}
 	}
-	passwordHash, err := user.MakePasswordHash(password)
+	passwordHash, err := auth.MakePasswordHash(password)
 	if err != nil {
 		return user.User{}, err
 	}
@@ -50,7 +51,7 @@ func (us UserService) Login(ctx context.Context, login, password string) (user.U
 		return user.User{}, err
 	}
 
-	if !u.CheckPassword(password) {
+	if !auth.CheckPassword(password, u.Password) {
 		return user.User{}, &user.IncorrectLoginOrPassword{
 			Login:    login,
 			Password: password,

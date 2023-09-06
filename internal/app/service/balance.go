@@ -6,29 +6,31 @@ import (
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/domain/transaction"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/adapters/repository"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/service"
+	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/storage/postgres"
 	"github.com/gofrs/uuid"
 	"math"
 	"time"
 )
 
 type BalanceService struct {
-	repo repository.TransactionRepository
+	repo     repository.TransactionRepository
+	txHelper *postgres.TransactionHelper
 }
 
-func NewBalanceService(repo repository.TransactionRepository) *BalanceService {
-	return &BalanceService{repo: repo}
+func NewBalanceService(repo repository.TransactionRepository, txHelper *postgres.TransactionHelper) *BalanceService {
+	return &BalanceService{repo: repo, txHelper: txHelper}
 }
 
 func (bs BalanceService) GetUserBalance(ctx context.Context, userID uuid.UUID) (float64, error) {
-	return bs.repo.GetBalanceByUser(ctx, userID)
+	return bs.repo.GetBalanceByUser(ctx, userID, nil)
 }
 
-func (bs BalanceService) GetUserWithdrawSum(ctx context.Context, userID uuid.UUID) (float64, error) {
-	return bs.repo.GetWithdrawSumByUser(ctx, userID)
+func (bs BalanceService) GetUserWithdrawalSum(ctx context.Context, userID uuid.UUID) (float64, error) {
+	return bs.repo.GetWithdrawalSumByUser(ctx, userID)
 }
 
 func (bs BalanceService) GetUserWithdraws(ctx context.Context, userID uuid.UUID) ([]transaction.Transaction, error) {
-	withdraws, err := bs.repo.GetWithdrawsByUser(ctx, userID)
+	withdraws, err := bs.repo.GetWithdrawalsByUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +48,11 @@ func (bs BalanceService) Withdraw(ctx context.Context, sum float64, orderNumber 
 	if !order.ValidateOrderFormat(orderNumber) {
 		return &order.InvalidFormat{OrderNumber: orderNumber}
 	}
-
-	balance, err := bs.repo.GetBalanceByUser(ctx, userID)
+	tx, err := bs.txHelper.GetTransaction(ctx)
+	if err != nil {
+		return err
+	}
+	balance, err := bs.repo.GetBalanceByUser(ctx, userID, tx)
 	if err != nil {
 		return err
 	}
@@ -58,14 +63,19 @@ func (bs BalanceService) Withdraw(ctx context.Context, sum float64, orderNumber 
 	if err != nil {
 		return err
 	}
-	return bs.repo.CreateTransaction(
-		ctx, transaction.Transaction{
-			ID:          id,
-			UserID:      userID,
-			OderNumber:  orderNumber,
-			Sum:         -sum,
-			ProcessedAt: time.Now(),
-			Type:        transaction.TypeWithdraw,
-		},
-	)
+	if err := bs.repo.CreateTransaction(ctx, transaction.Transaction{
+		ID:          id,
+		UserID:      userID,
+		OrderNumber: orderNumber,
+		Sum:         -sum,
+		ProcessedAt: time.Now(),
+		Type:        transaction.TypeWithdraw,
+	}, tx); err != nil {
+		if err := tx.Rollback(); err != nil {
+			return err
+		}
+		return err
+	}
+
+	return tx.Commit()
 }

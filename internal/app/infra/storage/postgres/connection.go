@@ -47,3 +47,15 @@ func (c Client) CreateTables(ctx context.Context) error {
 	}
 	return nil
 }
+
+type TransactionHelper struct {
+	db *Client
+}
+
+func NewTransactionHelper(db *Client) *TransactionHelper {
+	return &TransactionHelper{db: db}
+}
+
+func (t TransactionHelper) GetTransaction(ctx context.Context) (bun.Tx, error) {
+	return t.db.BeginTx(ctx, &sql.TxOptions{})
+}

@@ -7,24 +7,29 @@ import (
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/adapters/clients"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/adapters/repository"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/service"
+	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/storage/postgres"
 	"github.com/gofrs/uuid"
 	"time"
 )
 
 type OrderService struct {
-	orderRepo     repository.OrderRepository
-	ordersChannel chan string
+	orderRepo repository.OrderRepository
+	txHelper  *postgres.TransactionHelper
 }
 
-func NewOrderService(orderRepo repository.OrderRepository, ordersChannel chan string) *OrderService {
-	return &OrderService{orderRepo: orderRepo, ordersChannel: ordersChannel}
+func NewOrderService(orderRepo repository.OrderRepository, txHelper *postgres.TransactionHelper) *OrderService {
+	return &OrderService{orderRepo: orderRepo, txHelper: txHelper}
 }
 
 func (os OrderService) LoadOrderByNumber(ctx context.Context, number string, userID uuid.UUID) error {
 	if !order.ValidateOrderFormat(number) {
 		return &order.InvalidFormat{OrderNumber: number}
 	}
-	if o, err := os.orderRepo.GetByNumber(ctx, number); err == nil {
+	tx, err := os.txHelper.GetTransaction(ctx)
+	if err != nil {
+		return err
+	}
+	if o, err := os.orderRepo.GetByNumber(ctx, number, tx); err == nil {
 		return &order.AlreadyLoaded{
 			OrderNumber: o.Number,
 			UserID:      o.UserID,
@@ -34,22 +39,22 @@ func (os OrderService) LoadOrderByNumber(ctx context.Context, number string, use
 	if err != nil {
 		return err
 	}
-	if err := os.orderRepo.CreateOrder(
-		ctx, order.Order{
-			ID:         id,
-			UserID:     userID,
-			Number:     number,
-			Status:     order.StatusNew,
-			UploadedAt: time.Now(),
-		},
-	); err != nil {
+	if err := os.orderRepo.CreateOrder(ctx, order.Order{
+		ID:         id,
+		UserID:     userID,
+		Number:     number,
+		Status:     order.StatusNew,
+		UploadedAt: time.Now(),
+	}, tx); err != nil {
+		if err := tx.Rollback(); err != nil {
+			return err
+		}
+		return err
+	}
+	if err := tx.Commit(); err != nil {
 		return err
 	}
 
-	//Пишем номер в канал в новом потоке, чтобы не блокировать хэндлер
-	go func() {
-		os.ordersChannel <- number
-	}()
 	return nil
 }
 
@@ -65,11 +70,8 @@ func (os OrderService) GetUserOrders(ctx context.Context, userID uuid.UUID) ([]s
 	return orders, nil
 }
 
-func (os OrderService) UpdateOrdersAndBalance(ctx context.Context, info []clients.OrderLoyaltyInfo) []error {
-	var orders []order.Order
-	var transactions []transaction.Transaction
-	var errors []error
-	errors = append(errors, os.fillInfo(ctx, info, &orders, &transactions)...)
+func (os OrderService) UpdateOrdersAndBalance(ctx context.Context, info map[string]clients.OrderLoyaltyInfo) []error {
+	orders, transactions, errors := os.makeOrdersAndTransactions(ctx, info)
 
 	if err := os.orderRepo.BatchUpdateOrdersAndBalance(ctx, orders, transactions); err != nil {
 		errors = append(errors, err)
@@ -78,26 +80,45 @@ func (os OrderService) UpdateOrdersAndBalance(ctx context.Context, info []client
 	return errors
 }
 
-func (os OrderService) RemoveOrder(ctx context.Context, number string) error {
-	o, err := os.orderRepo.GetByNumber(ctx, number)
+func (os OrderService) InvalidateOrder(ctx context.Context, number string) error {
+	tx, err := os.txHelper.GetTransaction(ctx)
 	if err != nil {
 		return err
 	}
-	return os.orderRepo.DeleteOrder(ctx, o)
+	o, err := os.orderRepo.GetByNumber(ctx, number, tx)
+	if err != nil {
+		if err := tx.Rollback(); err != nil {
+			return err
+		}
+		return err
+	}
+	o.Status = order.StatusInvalid
+	if err := os.orderRepo.UpdateOrder(ctx, o, tx); err != nil {
+		if err := tx.Rollback(); err != nil {
+			return err
+		}
+		return err
+	}
+
+	return tx.Commit()
 }
 
-func (os OrderService) fillInfo(
-	ctx context.Context, info []clients.OrderLoyaltyInfo, orders *[]order.Order, transactions *[]transaction.Transaction,
-) []error {
+func (os OrderService) makeOrdersAndTransactions(ctx context.Context, info map[string]clients.OrderLoyaltyInfo,
+) ([]order.Order, []transaction.Transaction, []error) {
 	var errors []error
-	for _, i := range info {
-		o, err := os.orderRepo.GetByNumber(ctx, i.Order)
-		if err != nil {
-			errors = append(
-				errors, order.NoSuchOrder{
-					OrderNumber: i.Order,
-				},
-			)
+	var transactions []transaction.Transaction
+	orderNumbers := os.getOrderNumbersByOrderInfos(info)
+	orders, err := os.orderRepo.GetBatchByNumbers(ctx, orderNumbers)
+	if err != nil {
+		errors = append(errors, err)
+		return orders, transactions, errors
+	}
+	if len(orders) == 0 {
+		return orders, transactions, errors
+	}
+	for _, o := range orders {
+		i, ok := info[o.Number]
+		if !ok {
 			continue
 		}
 		orderStatus, ok := os.getOrderStatusFromLoyalty(i.Status)
@@ -110,15 +131,18 @@ func (os OrderService) fillInfo(
 			)
 			continue
 		}
+		if o.Status == orderStatus {
+			continue
+		}
 		o.Status = orderStatus
-		*orders = append(*orders, o)
+		orders = append(orders, o)
 		if i.Accrual > 0 {
 			id, _ := uuid.NewV4()
-			*transactions = append(
-				*transactions, transaction.Transaction{
+			transactions = append(
+				transactions, transaction.Transaction{
 					ID:          id,
 					UserID:      o.UserID,
-					OderNumber:  o.Number,
+					OrderNumber: o.Number,
 					Sum:         i.Accrual,
 					ProcessedAt: time.Now(),
 					Type:        transaction.TypeIncome,
@@ -126,7 +150,12 @@ func (os OrderService) fillInfo(
 			)
 		}
 	}
-	return errors
+	return orders, transactions, errors
+}
+
+func (os OrderService) GetUnprocessedOrders(ctx context.Context) ([]order.Order, error) {
+	notFinalStatuses := []string{order.StatusNew, order.StatusProcessing}
+	return os.orderRepo.GetAllByStatuses(ctx, notFinalStatuses)
 }
 
 func (os OrderService) getOrderStatusFromLoyalty(loyaltyStatus string) (string, bool) {
@@ -139,4 +168,15 @@ func (os OrderService) getOrderStatusFromLoyalty(loyaltyStatus string) (string, 
 
 	status, ok := statusMap[loyaltyStatus]
 	return status, ok
+}
+
+func (os OrderService) getOrderNumbersByOrderInfos(info map[string]clients.OrderLoyaltyInfo) []string {
+	orderNumbers := make([]string, len(info))
+	n := 0
+	for _, i := range info {
+		orderNumbers[n] = i.Order
+		n++
+	}
+
+	return orderNumbers
 }

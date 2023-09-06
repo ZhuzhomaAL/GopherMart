@@ -3,6 +3,7 @@ package http
 import (
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/adapters/handlers"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/auth"
+	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/compress"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"net/http"
@@ -14,6 +15,7 @@ func GetRouter(userHandler handlers.UserHandler, orderHandler handlers.OrderHand
 
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(100 * time.Second))
+	r.Use(compress.GzipMiddleware)
 
 	r.Route(
 		"/api/user", func(r chi.Router) {

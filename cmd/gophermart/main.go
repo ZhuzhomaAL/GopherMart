@@ -17,6 +17,11 @@ import (
 	"time"
 )
 
+const (
+	frequency        = time.Second
+	workersCount int = 20
+)
+
 func main() {
 	conf := config.MakeConfig()
 	mainContext := context.Background()
@@ -28,12 +33,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ordersChannel := make(chan string, 1000)
 	orderInfosChannel := make(chan clients.OrderLoyaltyInfo, 1000)
 
 	orderRepo := repo.NewOrderRepository(dbClient)
 	userRepo := repo.NewUserRepository(dbClient)
 	transactionRepo := repo.NewTransactionRepository(dbClient)
+	txHelper := postgres.NewTransactionHelper(dbClient)
 
 	if err := dbClient.CreateTables(mainContext); err != nil {
 		log.Fatal(err)
@@ -41,14 +46,14 @@ func main() {
 
 	loyaltyClient := loyal.NewLoyaltyClient(conf.AccrualSystemAddress, l)
 
-	balanceService := service.NewBalanceService(transactionRepo)
-	orderService := service.NewOrderService(orderRepo, ordersChannel)
+	balanceService := service.NewBalanceService(transactionRepo, txHelper)
+	orderService := service.NewOrderService(orderRepo, txHelper)
 	userService := service.NewUserService(userRepo)
 
-	orderProcessor := service.NewOrderProcessor(ordersChannel, orderInfosChannel, loyaltyClient, orderService)
+	orderProcessor := service.NewOrderProcessor(orderInfosChannel, loyaltyClient, orderService)
 
-	fetchHandler := event.NewFetchHandler(ordersChannel, orderProcessor, time.Second, 20, l)
-	updateHandler := event.NewUpdateHandler(orderInfosChannel, orderService, time.Second, l)
+	fetchHandler := event.NewFetchHandler(orderProcessor, orderService, frequency, workersCount, l)
+	updateHandler := event.NewUpdateHandler(orderInfosChannel, orderService, frequency, l)
 
 	balanceHandler := httpHandlers.NewBalanceHandler(balanceService, l)
 	orderHandler := httpHandlers.NewOrderHandler(orderService, l)

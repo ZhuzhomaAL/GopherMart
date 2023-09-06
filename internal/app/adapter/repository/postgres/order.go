@@ -8,6 +8,7 @@ import (
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/service"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/storage/postgres"
 	"github.com/gofrs/uuid"
+	"github.com/uptrace/bun"
 )
 
 type OrderRepository struct {
@@ -18,14 +19,20 @@ func NewOrderRepository(client *postgres.Client) *OrderRepository {
 	return &OrderRepository{client: client}
 }
 
-func (or OrderRepository) CreateOrder(ctx context.Context, order order.Order) error {
-	_, err := or.client.NewInsert().Model(&order).Exec(ctx)
+func (or OrderRepository) CreateOrder(ctx context.Context, order order.Order, tx bun.IDB) error {
+	if tx == nil {
+		tx = or.client
+	}
+	_, err := tx.NewInsert().Model(&order).Exec(ctx)
 	return err
 }
 
-func (or OrderRepository) GetByNumber(ctx context.Context, number string) (order.Order, error) {
+func (or OrderRepository) GetByNumber(ctx context.Context, number string, tx bun.IDB) (order.Order, error) {
+	if tx == nil {
+		tx = or.client
+	}
 	o := new(order.Order)
-	err := or.client.NewSelect().Model(o).Where("number = ?", number).Scan(ctx)
+	err := tx.NewSelect().Model(o).Where("number = ?", number).Scan(ctx)
 	return *o, err
 }
 
@@ -42,13 +49,11 @@ func (or OrderRepository) GetAllByUser(ctx context.Context, userID uuid.UUID) ([
 	return orderInfos, nil
 }
 
-func (or OrderRepository) UpdateOrder(ctx context.Context, order order.Order) error {
-	_, err := or.client.NewUpdate().Model(&order).WherePK().Exec(ctx)
-	return err
-}
-
-func (or OrderRepository) DeleteOrder(ctx context.Context, order order.Order) error {
-	_, err := or.client.NewDelete().Model(&order).WherePK().Exec(ctx)
+func (or OrderRepository) UpdateOrder(ctx context.Context, order order.Order, tx bun.IDB) error {
+	if tx == nil {
+		tx = or.client
+	}
+	_, err := tx.NewUpdate().Model(&order).WherePK().Exec(ctx)
 	return err
 }
 
@@ -76,4 +81,34 @@ func (or OrderRepository) BatchUpdateOrdersAndBalance(
 	}
 
 	return tx.Commit()
+}
+
+func (or OrderRepository) GetAllByStatuses(ctx context.Context, statuses []string) ([]order.Order, error) {
+	orders := make([]order.Order, 0)
+	err := or.client.NewSelect().Model(&orders).
+		Where("status IN (?)", bun.In(statuses)).
+		Scan(ctx)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return orders, nil
+		}
+		return orders, err
+	}
+
+	return orders, nil
+}
+
+func (or OrderRepository) GetBatchByNumbers(ctx context.Context, orderNumbers []string) ([]order.Order, error) {
+	orders := make([]order.Order, 0)
+	err := or.client.NewSelect().Model(&orders).
+		Where("status IN (?)", bun.In(orderNumbers)).
+		Scan(ctx)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return orders, nil
+		}
+		return orders, err
+	}
+
+	return orders, nil
 }

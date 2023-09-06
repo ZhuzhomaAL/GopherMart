@@ -6,7 +6,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"go.uber.org/zap"
 	"net/http"
-	"time"
+	"strconv"
 )
 
 type LoyaltyClient struct {
@@ -24,17 +24,10 @@ const (
 
 func (lc LoyaltyClient) GetOrderProcessingInfo(order string) (clients.OrderLoyaltyInfo, error) {
 	client := resty.New()
-	orderInfo := new(clients.OrderLoyaltyInfo)
+	var orderInfo clients.OrderLoyaltyInfo
 	resp, err := client.
-		SetRetryCount(3).
-		SetRetryWaitTime(60*time.Second).
 		R().
-		SetResult(orderInfo).
-		AddRetryCondition(
-			func(response *resty.Response, err error) bool {
-				return response.StatusCode() == http.StatusTooManyRequests
-			},
-		).
+		SetResult(&orderInfo).
 		SetPathParams(
 			map[string]string{
 				"order": order,
@@ -45,16 +38,27 @@ func (lc LoyaltyClient) GetOrderProcessingInfo(order string) (clients.OrderLoyal
 	lc.log.L.Info("request", zap.String("URL", resp.Request.URL))
 	if err != nil {
 		if responseError, ok := err.(*resty.ResponseError); ok {
-			return *orderInfo, clients.LoyaltyServiceError{
+			return orderInfo, clients.LoyaltyServiceError{
 				OriginError: responseError,
 			}
 		}
-		return *orderInfo, err
+		return orderInfo, err
 	}
 
 	if resp.StatusCode() == http.StatusNoContent {
-		return *orderInfo, clients.NoOrderError{Order: order}
+		return orderInfo, clients.NoOrderError{Order: order}
 	}
 
-	return *orderInfo, nil
+	if resp.StatusCode() == http.StatusTooManyRequests {
+		retryAfter, err := strconv.Atoi(resp.Header().Get("Retry-After"))
+		if err != nil {
+			return orderInfo, err
+		}
+		return orderInfo, clients.TooManyRequests{
+			Order:      order,
+			RetryAfter: retryAfter,
+		}
+	}
+
+	return orderInfo, nil
 }

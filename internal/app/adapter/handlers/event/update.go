@@ -16,14 +16,15 @@ type UpdateHandler struct {
 	log               logger.MyLogger
 }
 
-func NewUpdateHandler(orderInfosChannel <-chan clients.OrderLoyaltyInfo, os service.OrderService, frequency time.Duration, log logger.MyLogger) *UpdateHandler {
+func NewUpdateHandler(
+	orderInfosChannel <-chan clients.OrderLoyaltyInfo, os service.OrderService, frequency time.Duration, log logger.MyLogger,
+) *UpdateHandler {
 	return &UpdateHandler{orderInfosChannel: orderInfosChannel, os: os, frequency: frequency, log: log}
 }
 
 func (u UpdateHandler) UpdateStatusAndBalance(ctx context.Context) {
 	ticker := time.NewTicker(u.frequency)
-	var infos []clients.OrderLoyaltyInfo
-Loop:
+	infos := make(map[string]clients.OrderLoyaltyInfo)
 	for {
 		select {
 		case <-ticker.C:
@@ -34,9 +35,9 @@ Loop:
 			infos = nil
 		case info, ok := <-u.orderInfosChannel:
 			if !ok {
-				break Loop
+				break
 			}
-			infos = append(infos, info)
+			infos[info.Order] = info
 		}
 	}
 }

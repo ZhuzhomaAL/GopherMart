@@ -44,7 +44,6 @@ func (oh OrderHandler) LoadOrder(w http.ResponseWriter, r *http.Request) {
 	if err := oh.os.LoadOrderByNumber(r.Context(), string(request), userID); err != nil {
 		oh.log.L.Error("failed to load order", zap.Error(err))
 		var errAlreadyLoaded *order.AlreadyLoaded
-		var errInvalidFormat *order.InvalidFormat
 		if errors.As(err, &errAlreadyLoaded) {
 			if errAlreadyLoaded.UserID == userID {
 				w.WriteHeader(http.StatusOK)
@@ -53,7 +52,7 @@ func (oh OrderHandler) LoadOrder(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "already loaded by other user", http.StatusConflict)
 			return
 		}
-		if errors.As(err, &errInvalidFormat) {
+		if errors.Is(err, order.InvalidFormat{}) {
 			http.Error(w, "invalid format of order number", http.StatusUnprocessableEntity)
 			return
 		}
@@ -65,7 +64,6 @@ func (oh OrderHandler) LoadOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (oh OrderHandler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	userID, ok := auth.GetUserID(r)
 	if !ok {
 		oh.log.L.Error("failed to get user")
@@ -76,6 +74,7 @@ func (oh OrderHandler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		oh.log.L.Error("failed to get user orders", zap.Error(err))
 		if _, ok := err.(*service.NoData); ok {
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -89,6 +88,7 @@ func (oh OrderHandler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write(resp); err != nil {
 		oh.log.L.Error("failed to make response", zap.Error(err))

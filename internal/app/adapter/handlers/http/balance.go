@@ -8,7 +8,6 @@ import (
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/auth"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/logger"
 	"go.uber.org/zap"
-	"io"
 	"net/http"
 )
 
@@ -39,7 +38,7 @@ func (b BalanceHandler) GetUserBalance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
 		return
 	}
-	withdrawn, err := b.bs.GetUserWithdrawSum(r.Context(), userID)
+	withdrawn, err := b.bs.GetUserWithdrawalSum(r.Context(), userID)
 	if err != nil {
 		b.log.L.Error("failed to get withdrawals", zap.Error(err))
 		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
@@ -69,11 +68,7 @@ func (b BalanceHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	withdraw := withdrawRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&withdraw); err != nil {
 		b.log.L.Error("failed to decode request", zap.Error(err))
-		if err == io.EOF {
-			http.Error(w, "request is empty, expected not empty", http.StatusBadRequest)
-			return
-		}
-		http.Error(w, "internal server error occurred", http.StatusInternalServerError)
+		http.Error(w, "Can not parse request", http.StatusBadRequest)
 		return
 	}
 	userID, ok := auth.GetUserID(r)

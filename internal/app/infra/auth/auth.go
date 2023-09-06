@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"github.com/gofrs/uuid"
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 )
 
 type contextUserIDKey int
 
-const ContextUserID contextUserIDKey = iota
+const ContextUserID contextUserIDKey = 0
 
 type Claims struct {
 	jwt.RegisteredClaims
@@ -79,4 +80,14 @@ func getUserIDFromToken(tokenString string) (uuid.UUID, error) {
 func GetUserID(r *http.Request) (uuid.UUID, bool) {
 	userID, ok := r.Context().Value(ContextUserID).(uuid.UUID)
 	return userID, ok
+}
+
+func CheckPassword(password, savedPassword string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(savedPassword), []byte(password))
+	return err == nil
+}
+
+func MakePasswordHash(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
 }
