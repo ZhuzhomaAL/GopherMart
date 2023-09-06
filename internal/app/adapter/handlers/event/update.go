@@ -32,7 +32,7 @@ func (u UpdateHandler) UpdateStatusAndBalance(ctx context.Context) {
 			if len(errors) > 0 {
 				u.log.L.Error("failed to update orders", zap.Errors("err", errors))
 			}
-			infos = nil
+			infos = make(map[string]clients.OrderLoyaltyInfo)
 		case info, ok := <-u.orderInfosChannel:
 			if !ok {
 				break

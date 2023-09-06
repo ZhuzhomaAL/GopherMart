@@ -30,39 +30,37 @@ func (f *FetchHandler) FetchOrderStatus(ctx context.Context) {
 	workers := make(chan struct{}, f.workersCount)
 	sleepSignal := make(chan int)
 	requestCtx, cancelRequests := context.WithCancel(ctx)
-	for {
-		select {
-		case <-ticker.C:
-			orders, err := f.orderService.GetUnprocessedOrders(ctx)
-			if err != nil {
-				f.log.L.Error("failed to get unprocessed orders", zap.Error(err))
-			}
-			if len(orders) == 0 {
-				continue
-			}
-			for _, o := range orders {
-				select {
-				case sleepTime := <-sleepSignal:
-					time.Sleep(time.Duration(sleepTime) * time.Second)
-				default:
-					orderNumber := o.Number
-					//Запускаем получение данных из сервиса лояльности многопоточно
-					//"Занимаем" или ожидаем один из потоков
-					workers <- struct{}{}
-					go func() {
-						err := f.processor.ProcessNewOrder(requestCtx, orderNumber)
-						if err != nil {
-							var tooManyRequests *clients.TooManyRequests
-							if errors.As(err, &tooManyRequests) {
-								cancelRequests()
-								sleepSignal <- tooManyRequests.RetryAfter
-							}
-							f.log.L.Error("failed to get order info", zap.Error(err))
+	defer cancelRequests()
+	for range ticker.C {
+		orders, err := f.orderService.GetUnprocessedOrders(ctx)
+		if err != nil {
+			f.log.L.Error("failed to get unprocessed orders", zap.Error(err))
+		}
+		if len(orders) == 0 {
+			continue
+		}
+		for _, o := range orders {
+			select {
+			case sleepTime := <-sleepSignal:
+				time.Sleep(time.Duration(sleepTime) * time.Second)
+			default:
+				orderNumber := o.Number
+				//Запускаем получение данных из сервиса лояльности многопоточно
+				//"Занимаем" или ожидаем один из потоков
+				workers <- struct{}{}
+				go func() {
+					err := f.processor.ProcessNewOrder(requestCtx, orderNumber)
+					if err != nil {
+						var tooManyRequests *clients.TooManyRequests
+						if errors.As(err, &tooManyRequests) {
+							cancelRequests()
+							sleepSignal <- tooManyRequests.RetryAfter
 						}
-						//"Освобождаем" поток
-						<-workers
-					}()
-				}
+						f.log.L.Error("failed to get order info", zap.Error(err))
+					}
+					//"Освобождаем" поток
+					<-workers
+				}()
 			}
 		}
 	}
