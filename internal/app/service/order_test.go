@@ -154,20 +154,22 @@ func TestOrderService_GetUnprocessedOrders(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rep := mocks.OrderRepository{}
-			txHelper := storagemocks.TransactionHelper{}
-			os := NewOrderService(&rep, &txHelper)
-			rep.On("GetAllByStatuses", tt.args.ctx, notFinalStatuses).Return(tt.mockRes, tt.mockErr)
-			orders, err := os.GetUnprocessedOrders(tt.args.ctx)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetUnprocessedOrders() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(orders, tt.wantedRes) {
-				t.Errorf("GetUnprocessedOrders() got = %v, want %v", orders, tt.wantedRes)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				rep := mocks.OrderRepository{}
+				txHelper := storagemocks.TransactionHelper{}
+				os := NewOrderService(&rep, &txHelper)
+				rep.On("GetAllByStatuses", tt.args.ctx, notFinalStatuses).Return(tt.mockRes, tt.mockErr)
+				orders, err := os.GetUnprocessedOrders(tt.args.ctx)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetUnprocessedOrders() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+				if !reflect.DeepEqual(orders, tt.wantedRes) {
+					t.Errorf("GetUnprocessedOrders() got = %v, want %v", orders, tt.wantedRes)
+				}
+			},
+		)
 	}
 }
 
@@ -228,25 +230,29 @@ func TestOrderService_InvalidateOrder(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rep := mocks.OrderRepository{}
-			txHelper := storagemocks.TransactionHelper{}
-			os := NewOrderService(&rep, &txHelper)
-			tx := storagemocks.Transaction{}
-			txHelper.On("StartTransaction", tt.args.ctx).Return(&tx, nil)
-			tx.On("Rollback").Return(nil)
-			tx.On("Commit").Return(nil)
-			tx.On("GetTransaction").Return(&bun.Tx{})
-			rep.On("GetByNumber", tt.args.ctx, tt.args.number, &bun.Tx{}).Return(tt.mockRes, tt.mockGetOrderErr)
-			rep.On("UpdateOrder", tt.args.ctx, order.Order{Number: tt.args.number, Status: order.StatusInvalid}, &bun.Tx{}).Return(tt.mockUpdateErr)
-			err := os.InvalidateOrder(tt.args.ctx, tt.args.number)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("InvalidateOrder() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if tt.wantErr {
-				require.Equal(t, tt.wantedErr, err)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				rep := mocks.OrderRepository{}
+				txHelper := storagemocks.TransactionHelper{}
+				os := NewOrderService(&rep, &txHelper)
+				tx := storagemocks.Transaction{}
+				txHelper.On("StartTransaction", tt.args.ctx).Return(&tx, nil)
+				tx.On("Rollback").Return(nil)
+				tx.On("Commit").Return(nil)
+				tx.On("GetTransaction").Return(&bun.Tx{})
+				rep.On("GetByNumber", tt.args.ctx, tt.args.number, &bun.Tx{}).Return(tt.mockRes, tt.mockGetOrderErr)
+				rep.On(
+					"UpdateOrder", tt.args.ctx, order.Order{Number: tt.args.number, Status: order.StatusInvalid}, &bun.Tx{},
+				).Return(tt.mockUpdateErr)
+				err := os.InvalidateOrder(tt.args.ctx, tt.args.number)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("InvalidateOrder() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if tt.wantErr {
+					require.Equal(t, tt.wantedErr, err)
+				}
+			},
+		)
 	}
 }
 
@@ -317,25 +323,27 @@ func TestOrderService_LoadOrderByNumber(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rep := mocks.OrderRepository{}
-			txHelper := storagemocks.TransactionHelper{}
-			os := NewOrderService(&rep, &txHelper)
-			tx := storagemocks.Transaction{}
-			txHelper.On("StartTransaction", tt.args.ctx).Return(&tx, nil)
-			tx.On("Rollback").Return(nil)
-			tx.On("Commit").Return(nil)
-			tx.On("GetTransaction").Return(&bun.Tx{})
-			rep.On("GetByNumber", tt.args.ctx, tt.args.number, &bun.Tx{}).Return(tt.mockRes, tt.mockGetOrderErr)
-			rep.On("CreateOrder", tt.args.ctx, mock.AnythingOfType("order.Order"), &bun.Tx{}).Return(tt.mockCreateErr)
-			err := os.LoadOrderByNumber(tt.args.ctx, tt.args.number, userID)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("LoadOrderByNumber() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if tt.wantErr {
-				require.Equal(t, tt.wantedErr, err)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				rep := mocks.OrderRepository{}
+				txHelper := storagemocks.TransactionHelper{}
+				os := NewOrderService(&rep, &txHelper)
+				tx := storagemocks.Transaction{}
+				txHelper.On("StartTransaction", tt.args.ctx).Return(&tx, nil)
+				tx.On("Rollback").Return(nil)
+				tx.On("Commit").Return(nil)
+				tx.On("GetTransaction").Return(&bun.Tx{})
+				rep.On("GetByNumber", tt.args.ctx, tt.args.number, &bun.Tx{}).Return(tt.mockRes, tt.mockGetOrderErr)
+				rep.On("CreateOrder", tt.args.ctx, mock.AnythingOfType("order.Order"), &bun.Tx{}).Return(tt.mockCreateErr)
+				err := os.LoadOrderByNumber(tt.args.ctx, tt.args.number, userID)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("LoadOrderByNumber() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if tt.wantErr {
+					require.Equal(t, tt.wantedErr, err)
+				}
+			},
+		)
 	}
 }
 
@@ -369,14 +377,18 @@ func TestOrderService_UpdateOrdersAndBalance(t *testing.T) {
 					},
 				},
 			},
-			mockGetButchOrders: []order.Order{{
-				Number: orderNumber,
-				Status: order.StatusNew,
-			}},
-			orders: []order.Order{{
-				Number: orderNumber,
-				Status: order.StatusProcessed,
-			}},
+			mockGetButchOrders: []order.Order{
+				{
+					Number: orderNumber,
+					Status: order.StatusNew,
+				},
+			},
+			orders: []order.Order{
+				{
+					Number: orderNumber,
+					Status: order.StatusProcessed,
+				},
+			},
 		},
 		{
 			name: "Test_2. Невалидный статус",
@@ -390,19 +402,25 @@ func TestOrderService_UpdateOrdersAndBalance(t *testing.T) {
 					},
 				},
 			},
-			mockGetButchOrders: []order.Order{{
-				Number: orderNumber,
-				Status: order.StatusNew,
-			}},
-			orders: []order.Order{{
-				Number: orderNumber,
-				Status: order.StatusNew,
-			}},
+			mockGetButchOrders: []order.Order{
+				{
+					Number: orderNumber,
+					Status: order.StatusNew,
+				},
+			},
+			orders: []order.Order{
+				{
+					Number: orderNumber,
+					Status: order.StatusNew,
+				},
+			},
 			wantErr: true,
-			wantedErr: []error{order.InvalidStatus{
-				OrderNumber: orderNumber,
-				Status:      "Невалидный статус",
-			}},
+			wantedErr: []error{
+				order.InvalidStatus{
+					OrderNumber: orderNumber,
+					Status:      "Невалидный статус",
+				},
+			},
 		},
 		{
 			name: "Test_3. Ошибка получения заказов",
@@ -434,35 +452,42 @@ func TestOrderService_UpdateOrdersAndBalance(t *testing.T) {
 					},
 				},
 			},
-			mockGetButchOrders: []order.Order{{
-				Number: orderNumber,
-				Status: order.StatusNew,
-			}},
-			orders: []order.Order{{
-				Number: orderNumber,
-				Status: order.StatusProcessed,
-			}},
+			mockGetButchOrders: []order.Order{
+				{
+					Number: orderNumber,
+					Status: order.StatusNew,
+				},
+			},
+			orders: []order.Order{
+				{
+					Number: orderNumber,
+					Status: order.StatusProcessed,
+				},
+			},
 			mockUpdateErr: errors.New("can not update"),
 			wantErr:       true,
 			wantedErr:     []error{errors.New("can not update")},
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rep := mocks.OrderRepository{}
-			txHelper := storagemocks.TransactionHelper{}
-			os := NewOrderService(&rep, &txHelper)
-			orderNumbers := make([]string, len(tt.args.info))
-			n := 0
-			for _, i := range tt.args.info {
-				orderNumbers[n] = i.Order
-				n++
-			}
-			rep.On("GetBatchByNumbers", tt.args.ctx, orderNumbers).Return(tt.mockGetButchOrders, tt.mockGetButchOrdersErr)
-			rep.On("BatchUpdateOrdersAndBalance", tt.args.ctx, tt.orders, mock.AnythingOfType("[]transaction.Transaction")).Return(tt.mockUpdateErr)
-			if got := os.UpdateOrdersAndBalance(tt.args.ctx, tt.args.info); !reflect.DeepEqual(got, tt.wantedErr) {
-				t.Errorf("UpdateOrdersAndBalance() = %v, want %v", got, tt.wantedErr)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				rep := mocks.OrderRepository{}
+				txHelper := storagemocks.TransactionHelper{}
+				os := NewOrderService(&rep, &txHelper)
+				orderNumbers := make([]string, len(tt.args.info))
+				n := 0
+				for _, i := range tt.args.info {
+					orderNumbers[n] = i.Order
+					n++
+				}
+				rep.On("GetBatchByNumbers", tt.args.ctx, orderNumbers).Return(tt.mockGetButchOrders, tt.mockGetButchOrdersErr)
+				rep.On(
+					"BatchUpdateOrdersAndBalance", tt.args.ctx, tt.orders, mock.AnythingOfType("[]transaction.Transaction"),
+				).Return(tt.mockUpdateErr)
+				got := os.UpdateOrdersAndBalance(tt.args.ctx, tt.args.info)
+				require.Equal(t, got, tt.wantedErr)
+			},
+		)
 	}
 }
