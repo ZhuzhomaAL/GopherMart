@@ -39,13 +39,15 @@ func (os OrderService) LoadOrderByNumber(ctx context.Context, number string, use
 	if err != nil {
 		return err
 	}
-	if err := os.orderRepo.CreateOrder(ctx, order.Order{
-		ID:         id,
-		UserID:     userID,
-		Number:     number,
-		Status:     order.StatusNew,
-		UploadedAt: time.Now(),
-	}, tx); err != nil {
+	if err := os.orderRepo.CreateOrder(
+		ctx, order.Order{
+			ID:         id,
+			UserID:     userID,
+			Number:     number,
+			Status:     order.StatusNew,
+			UploadedAt: time.Now(),
+		}, tx,
+	); err != nil {
 		if err := tx.Rollback(); err != nil {
 			return err
 		}
@@ -103,7 +105,8 @@ func (os OrderService) InvalidateOrder(ctx context.Context, number string) error
 	return tx.Commit()
 }
 
-func (os OrderService) makeOrdersAndTransactions(ctx context.Context, info map[string]clients.OrderLoyaltyInfo,
+func (os OrderService) makeOrdersAndTransactions(
+	ctx context.Context, info map[string]clients.OrderLoyaltyInfo,
 ) ([]order.Order, []transaction.Transaction, []error) {
 	var errors []error
 	var transactions []transaction.Transaction
@@ -116,7 +119,7 @@ func (os OrderService) makeOrdersAndTransactions(ctx context.Context, info map[s
 	if len(orders) == 0 {
 		return orders, transactions, errors
 	}
-	for _, o := range orders {
+	for n, o := range orders {
 		i, ok := info[o.Number]
 		if !ok {
 			continue
@@ -134,8 +137,7 @@ func (os OrderService) makeOrdersAndTransactions(ctx context.Context, info map[s
 		if o.Status == orderStatus {
 			continue
 		}
-		o.Status = orderStatus
-		orders = append(orders, o)
+		orders[n].Status = orderStatus
 		if i.Accrual > 0 {
 			id, _ := uuid.NewV4()
 			transactions = append(

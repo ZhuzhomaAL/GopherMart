@@ -101,7 +101,7 @@ func (or OrderRepository) GetAllByStatuses(ctx context.Context, statuses []strin
 func (or OrderRepository) GetBatchByNumbers(ctx context.Context, orderNumbers []string) ([]order.Order, error) {
 	orders := make([]order.Order, 0)
 	err := or.client.NewSelect().Model(&orders).
-		Where("status IN (?)", bun.In(orderNumbers)).
+		Where("number IN (?)", bun.In(orderNumbers)).
 		Scan(ctx)
 	if err != nil {
 		if err == sql.ErrNoRows {
