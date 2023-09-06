@@ -52,7 +52,8 @@ func (oh OrderHandler) LoadOrder(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "already loaded by other user", http.StatusConflict)
 			return
 		}
-		if errors.Is(err, order.InvalidFormat{}) {
+		var errInvalidFormat *order.InvalidFormat
+		if errors.As(err, &errInvalidFormat) {
 			http.Error(w, "invalid format of order number", http.StatusUnprocessableEntity)
 			return
 		}

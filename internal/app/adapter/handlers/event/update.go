@@ -25,11 +25,6 @@ func NewUpdateHandler(
 func (u UpdateHandler) UpdateStatusAndBalance(ctx context.Context) {
 	ticker := time.NewTicker(u.frequency)
 	infos := make(map[string]clients.OrderLoyaltyInfo)
-	infos["4283279126516590"] = clients.OrderLoyaltyInfo{
-		Order:   "4283279126516590",
-		Status:  clients.StatusProcessed,
-		Accrual: 100,
-	}
 	for {
 		select {
 		case <-ticker.C:
