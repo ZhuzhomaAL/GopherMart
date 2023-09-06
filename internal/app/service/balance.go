@@ -6,7 +6,7 @@ import (
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/domain/transaction"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/adapters/repository"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/service"
-	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/storage/postgres"
+	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/storage"
 	"github.com/gofrs/uuid"
 	"math"
 	"time"
@@ -14,10 +14,10 @@ import (
 
 type BalanceService struct {
 	repo     repository.TransactionRepository
-	txHelper *postgres.TransactionHelper
+	txHelper storage.TransactionHelper
 }
 
-func NewBalanceService(repo repository.TransactionRepository, txHelper *postgres.TransactionHelper) *BalanceService {
+func NewBalanceService(repo repository.TransactionRepository, txHelper storage.TransactionHelper) *BalanceService {
 	return &BalanceService{repo: repo, txHelper: txHelper}
 }
 
@@ -48,11 +48,11 @@ func (bs BalanceService) Withdraw(ctx context.Context, sum float64, orderNumber 
 	if !order.ValidateOrderFormat(orderNumber) {
 		return &order.InvalidFormat{OrderNumber: orderNumber}
 	}
-	tx, err := bs.txHelper.GetTransaction(ctx)
+	tx, err := bs.txHelper.StartTransaction(ctx)
 	if err != nil {
 		return err
 	}
-	balance, err := bs.repo.GetBalanceByUser(ctx, userID, tx)
+	balance, err := bs.repo.GetBalanceByUser(ctx, userID, tx.GetTransaction())
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (bs BalanceService) Withdraw(ctx context.Context, sum float64, orderNumber 
 		Sum:         -sum,
 		ProcessedAt: time.Now(),
 		Type:        transaction.TypeWithdraw,
-	}, tx); err != nil {
+	}, tx.GetTransaction()); err != nil {
 		if err := tx.Rollback(); err != nil {
 			return err
 		}

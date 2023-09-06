@@ -7,6 +7,7 @@ import (
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/domain/order"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/domain/transaction"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/domain/user"
+	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/storage"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
@@ -48,6 +49,7 @@ func (c Client) CreateTables(ctx context.Context) error {
 	return nil
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.33.1 --name=TransactionHelper
 type TransactionHelper struct {
 	db *Client
 }
@@ -56,6 +58,27 @@ func NewTransactionHelper(db *Client) *TransactionHelper {
 	return &TransactionHelper{db: db}
 }
 
-func (t TransactionHelper) GetTransaction(ctx context.Context) (bun.Tx, error) {
-	return t.db.BeginTx(ctx, &sql.TxOptions{})
+func (t TransactionHelper) StartTransaction(ctx context.Context) (storage.Transaction, error) {
+	tx, err := t.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return PgTransaction{&tx}, nil
+}
+
+type PgTransaction struct {
+	tx *bun.Tx
+}
+
+func (p PgTransaction) Commit() error {
+	return p.tx.Commit()
+}
+
+func (p PgTransaction) Rollback() error {
+	return p.tx.Rollback()
+}
+
+func (p PgTransaction) GetTransaction() *bun.Tx {
+	return p.tx
 }

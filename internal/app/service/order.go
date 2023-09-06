@@ -7,17 +7,17 @@ import (
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/adapters/clients"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/adapters/repository"
 	"github.com/ZhuzhomaAL/GopherMart/internal/app/core/ports/service"
-	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/storage/postgres"
+	"github.com/ZhuzhomaAL/GopherMart/internal/app/infra/storage"
 	"github.com/gofrs/uuid"
 	"time"
 )
 
 type OrderService struct {
 	orderRepo repository.OrderRepository
-	txHelper  *postgres.TransactionHelper
+	txHelper  storage.TransactionHelper
 }
 
-func NewOrderService(orderRepo repository.OrderRepository, txHelper *postgres.TransactionHelper) *OrderService {
+func NewOrderService(orderRepo repository.OrderRepository, txHelper storage.TransactionHelper) *OrderService {
 	return &OrderService{orderRepo: orderRepo, txHelper: txHelper}
 }
 
@@ -25,11 +25,11 @@ func (os OrderService) LoadOrderByNumber(ctx context.Context, number string, use
 	if !order.ValidateOrderFormat(number) {
 		return &order.InvalidFormat{OrderNumber: number}
 	}
-	tx, err := os.txHelper.GetTransaction(ctx)
+	tx, err := os.txHelper.StartTransaction(ctx)
 	if err != nil {
 		return err
 	}
-	if o, err := os.orderRepo.GetByNumber(ctx, number, tx); err == nil {
+	if o, err := os.orderRepo.GetByNumber(ctx, number, tx.GetTransaction()); err == nil {
 		return &order.AlreadyLoaded{
 			OrderNumber: o.Number,
 			UserID:      o.UserID,
@@ -46,7 +46,7 @@ func (os OrderService) LoadOrderByNumber(ctx context.Context, number string, use
 			Number:     number,
 			Status:     order.StatusNew,
 			UploadedAt: time.Now(),
-		}, tx,
+		}, tx.GetTransaction(),
 	); err != nil {
 		if err := tx.Rollback(); err != nil {
 			return err
@@ -83,11 +83,11 @@ func (os OrderService) UpdateOrdersAndBalance(ctx context.Context, info map[stri
 }
 
 func (os OrderService) InvalidateOrder(ctx context.Context, number string) error {
-	tx, err := os.txHelper.GetTransaction(ctx)
+	tx, err := os.txHelper.StartTransaction(ctx)
 	if err != nil {
 		return err
 	}
-	o, err := os.orderRepo.GetByNumber(ctx, number, tx)
+	o, err := os.orderRepo.GetByNumber(ctx, number, tx.GetTransaction())
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
 			return err
@@ -95,7 +95,7 @@ func (os OrderService) InvalidateOrder(ctx context.Context, number string) error
 		return err
 	}
 	o.Status = order.StatusInvalid
-	if err := os.orderRepo.UpdateOrder(ctx, o, tx); err != nil {
+	if err := os.orderRepo.UpdateOrder(ctx, o, tx.GetTransaction()); err != nil {
 		if err := tx.Rollback(); err != nil {
 			return err
 		}
